@@ -1,0 +1,10 @@
+{
+    "Device Start and Initialization": [],
+    "Network and Discovery Attempts": [],
+    "TLS Handshake and Requests": [],
+    "Device Identity Retrieval": [],
+    "Successful Connection": [],
+    "Connection Failure (Key Mismatch)": [],
+    "Device Credentials": {},
+    "Uncategorized": []
+}
