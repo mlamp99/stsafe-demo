@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Log Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px; /* Set the base font size */
+            line-height: 1.6;
+        }
+        h2 {
+            color: #007BFF;
+            font-size: 18px; /* Set font size for headings */
+        }
+        .log-category {
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 10px;
+        }
+        .connection-success {
+            color: darkgreen;
+        }
+        .connection-failure {
+            color: red;
+        }
+        pre, p {
+            white-space: pre-wrap; /* Wrap preformatted text */
+            word-wrap: break-word; /* Break long words */
+            overflow-wrap: anywhere; /* Allow breaks within words */
+            line-height: 1.2; /* Reduce line spacing for preformatted text */
+            margin: 0; /* Remove margin around text blocks */
+        }
+    </style>
+
+</head>
+<body>
+    <h1>Device Log Viewer</h1>
+    <div id="logs">
+        <!-- Logs will be dynamically inserted here -->
+    </div>
+
+    <script>
+        async function loadLogs() {
+            try {
+                // Fetch the JSON file with a cache-busting timestamp
+                const response = await fetch("usb_data_device2.json" + "?" + new Date().getTime()); 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Parse the JSON data
+                const data = await response.json();
+
+                // Debugging: Check the data in the console
+                console.log('Fetched Data:', data);
+
+                // Clear the logs container
+                const logsContainer = document.getElementById('logs');
+                logsContainer.innerHTML = '';
+
+                // Create sections for each category if they have data
+                for (const [category, entries] of Object.entries(data)) {
+                    // Skip empty sections
+                    if (
+                        (Array.isArray(entries) && entries.length === 0) || 
+                        (typeof entries === 'object' && Object.keys(entries).length === 0)
+                    ) {
+                        continue;
+                    }
+
+                    const section = document.createElement('div');
+                    section.className = 'log-category';
+
+                    // Add category title
+                    const title = document.createElement('h2');
+                    title.textContent = category;
+                    section.appendChild(title);
+
+                    // Add log entries
+                    if (Array.isArray(entries)) {
+                        entries.forEach(entry => {
+                            const message = entry.message || '';
+                            if (message.trim() === '>') return; // Remove empty lines with ">"
+                            
+                            const messageElement = document.createElement('p');
+
+                            // Apply specific styles for "Connection Success" and "Connection Failure" sections
+                            if (category === "Successful Connection") {
+                                messageElement.className = 'connection-success';
+                            } else if (category === "Connection Failure (Key Mismatch)") {
+                                messageElement.className = 'connection-failure';
+                            }
+
+                            messageElement.textContent = message;
+                            section.appendChild(messageElement);
+                        });
+                    } else if (typeof entries === 'object') {
+                        // Filter out specific keys from the "Device Credentials" section
+                        if (category === "Device Credentials") {
+                            const filteredEntries = { ...entries };
+                            delete filteredEntries.wifi_ssid;
+                            delete filteredEntries.wifi_credential;
+                            delete filteredEntries.time_hwm;
+                            delete filteredEntries.mqtt_port;
+
+                            const pre = document.createElement('pre');
+                            pre.textContent = JSON.stringify(filteredEntries, null, 2);
+                            section.appendChild(pre);
+                        } else {
+                            const pre = document.createElement('pre');
+                            pre.textContent = JSON.stringify(entries, null, 2);
+                            section.appendChild(pre);
+                        }
+                    }
+
+                    // Append the section to the logs container
+                    logsContainer.appendChild(section);
+                }
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                const logsContainer = document.getElementById('logs');
+                logsContainer.innerHTML = `<p style="color: red;">Failed to load logs: ${error.message}</p>`;
+            }
+        }
+
+        // Refresh logs every 2 seconds
+        setInterval(loadLogs, 2000);
+
+        // Initial load
+        loadLogs();
+    </script>
+</body>
+</html>
+
